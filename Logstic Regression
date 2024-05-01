@@ -1,1 +1,88 @@
+import pandas as pd
 
+data = pd.read_csv('train.csv')
+data.head(), data.info()
+
+test_data = pd.read_csv('test.csv')
+test_data.head(), test_data.info()
+
+from sklearn.metrics import roc_auc_score, classification_report
+from sklearn.preprocessing import label_binarize
+import numpy as np
+
+y_bin = label_binarize(y, classes=np.unique(y))
+
+X_train, X_test, y_train, y_test, y_bin_train, y_bin_test = train_test_split(X, y, y_bin, test_size=0.2, random_state=42)
+
+model.fit(X_train, y_train)
+
+y_score = model.predict_proba(X_test)
+
+roc_auc = roc_auc_score(y_bin_test, y_score, average='macro', multi_class='ovr')
+
+predictions = model.predict(X_test)
+f1_report = classification_report(y_test, predictions, output_dict=True)
+f1_score_macro = f1_report['macro avg']['f1-score']
+
+roc_auc, f1_score_macro
+
+import matplotlib.pyplot as plt
+from sklearn.metrics import roc_curve, auc
+from sklearn.preprocessing import LabelBinarizer
+from itertools import cycle
+import seaborn as sns
+
+def plot_multiclass_roc(y_test, y_score, classes, n_classes):
+    # Compute ROC curve and ROC area for each class
+    fpr = dict()
+    tpr = dict()
+    roc_auc = dict()
+    for i in range(n_classes):
+        fpr[i], tpr[i], _ = roc_curve(y_test[:, i], y_score[:, i])
+        roc_auc[i] = auc(fpr[i], tpr[i])
+
+    all_fpr = np.unique(np.concatenate([fpr[i] for i in range(n_classes)]))
+
+    mean_tpr = np.zeros_like(all_fpr)
+    for i in range(n_classes):
+        mean_tpr += np.interp(all_fpr, fpr[i], tpr[i])
+
+    mean_tpr /= n_classes
+
+    plt.figure(figsize=(10, 8))
+
+    colors = cycle(['blue', 'red', 'green', 'yellow', 'orange', 'purple', 'pink'])
+    for i, color in zip(range(n_classes), colors):
+        plt.plot(fpr[i], tpr[i], color=color, lw=2,
+                 label='ROC curve of class {0} (area = {1:0.2f})'
+                 ''.format(classes[i], roc_auc[i]))
+
+    plt.plot([0, 1], [0, 1], 'k--', lw=2)
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Some extension of Receiver operating characteristic to multi-class')
+    plt.legend(loc="lower right")
+    plt.show()
+
+lb = LabelBinarizer()
+lb.fit(y)
+y_test_bin = lb.transform(y_test)
+
+plot_multiclass_roc(y_test_bin, y_score, lb.classes_, len(lb.classes_))
+
+from sklearn.metrics import confusion_matrix
+
+conf_mat = confusion_matrix(y_test, predictions)
+plt.figure(figsize=(10, 8))
+sns.heatmap(conf_mat, annot=True, fmt='d', cmap='Blues', xticklabels=lb.classes_, yticklabels=lb.classes_)
+plt.xlabel('Predicted')
+plt.ylabel('True')
+plt.title('Confusion Matrix')
+plt.show()
+
+precision_macro = f1_report['macro avg']['precision']
+recall_macro = f1_report['macro avg']['recall']
+
+precision_macro, recall_macro
